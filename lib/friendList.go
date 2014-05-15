@@ -160,7 +160,6 @@ func FriendListUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err
 		//fmt.Println(flUpd)
 
 		list := ""
-
 		fmt.Println("before loop", flUpd)
 		for idx, e := range flUpd.NewFriends {
 			fmt.Println("in loop" + e)
@@ -172,19 +171,21 @@ func FriendListUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err
 
 		fmt.Println("list: " + list)
 
-		qryString := "insert into friendrelation (fk_idusers, fk_idusers_friend)" +
-			" (select a.idusers, b.idusers" +
-			" from users a, users b" +
-			" where a.phonenum='" + userPhoneNo + "' and b.phonenum in (" + list + "));"
+		if len(list) != 0 {
+			qryString := "insert into friendrelation (fk_idusers, fk_idusers_friend)" +
+				" (select a.idusers, b.idusers" +
+				" from users a, users b" +
+				" where a.phonenum='" + userPhoneNo + "' and b.phonenum in (" + list + "));"
+		
+			stmt, err := db.Prepare(qryString)
+			checkErr(err)
 
-		stmt, err := db.Prepare(qryString)
-		checkErr(err)
+			res, err := stmt.Exec()
+			checkErr(err)
 
-		res, err := stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
+			_, err = res.LastInsertId()
+			checkErr(err)
+		}
 
 		list = ""
 
@@ -194,58 +195,60 @@ func FriendListUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err
 			}
 			list += "'" + e + "'"
 		}
-
+		
 		fmt.Println("list2:" + list)
+		
+		if len(list) != 0 {
+			qryString := "SET SQL_SAFE_UPDATES = 0;"
 
-		qryString = "SET SQL_SAFE_UPDATES = 0;"
+			stmt, err := db.Prepare(qryString)
+			checkErr(err)
 
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
+			res, err := stmt.Exec()
+			checkErr(err)
 
-		res, err = stmt.Exec()
-		checkErr(err)
+			_, err = res.LastInsertId()
+			checkErr(err)
 
-		_, err = res.LastInsertId()
-		checkErr(err)
+			qryString = " delete from friendrelation" +
+				" where idfriendrelation in (select temp.idfriendrelation from (" +
+				" select idfriendrelation" +
+				" from friendrelation" +
+				" where" +
+				" fk_idusers in (" +
+				" select idusers from users" +
+				" where phonenum='" + userPhoneNo + "'" +
+				" )" +
+				" and" +
+				" fk_idusers_friend in (" +
+				" select idusers from users" +
+				" where phonenum in (" + list +
+				" ) )" +
+				" ) as temp" +
+				" );"
 
-		qryString = " delete from friendrelation" +
-			" where idfriendrelation in (select temp.idfriendrelation from (" +
-			" select idfriendrelation" +
-			" from friendrelation" +
-			" where" +
-			" fk_idusers in (" +
-			" select idusers from users" +
-			" where phonenum='" + userPhoneNo + "'" +
-			" )" +
-			" and" +
-			" fk_idusers_friend in (" +
-			" select idusers from users" +
-			" where phonenum in (" + list +
-			" ) )" +
-			" ) as temp" +
-			" );"
+			fmt.Println(qryString)
 
-		fmt.Println(qryString)
+			stmt, err = db.Prepare(qryString)
+			checkErr(err)
 
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
+			res, err = stmt.Exec()
+			checkErr(err)
 
-		res, err = stmt.Exec()
-		checkErr(err)
+			_, err = res.LastInsertId()
+			checkErr(err)
 
-		_, err = res.LastInsertId()
-		checkErr(err)
+			qryString = " SET SQL_SAFE_UPDATES = 1;"
 
-		qryString = " SET SQL_SAFE_UPDATES = 1;"
+			stmt, err = db.Prepare(qryString)
+			checkErr(err)
 
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
+			res, err = stmt.Exec()
+			checkErr(err)
 
-		res, err = stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
+			_, err = res.LastInsertId()
+			checkErr(err)
+		}
 
 	} else { // if exists
 		w.WriteHeader(http.StatusBadRequest)
