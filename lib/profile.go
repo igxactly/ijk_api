@@ -51,33 +51,52 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 	defer db.Close()
 
 	// check account signkey
-	id, err := GetUserID_withSignkey(db, userPhoneNo, userSignkey)
+	_, err = GetUserID_withSignkey(db, userPhoneNo, userSignkey)
 
 	//query profiles of friends
 	var (
-		profile    Profile
-		phone      string
-		nick       string
-		userstatus string
-		region     string
-		wperiod    int
-		omachines  *OwnMachines
-		x          []byte
+		profile        Profile
+		phone          string
+		nick           string
+		userstatus     string
+		region         string
+		wperiod        int
+		machidliststr  string
+		nummachliststr string
+		omachines      *OwnMachines
+		x              []byte
 	)
 
 	if err == nil {
-		qryString := "select id_users, phonenum, name, region, workingperiod, currentstatus from users" +
-			" where id_users=" + id + ");"
+		qryString := "select" +
+			"u.phonenum, u.name, u.region, u.workingperiod," +
+			"u.currentstatus, m.idmachinelist, m.nummachine" +
+			"from" +
+			"users" +
+			"as u," +
+			"(select" +
+			"idusers," +
+			"group_concat(idmachine separator ', ')" +
+			"as idmachinelist," +
+			"group_concat(nummachine separator ', ')" +
+			"as nummachinelist" +
+			"from ownmachines group by idusers" +
+			") as m" +
+			"u.idusers" +
+			"in (select idusers from users where phonenum='" + userPhoneNo + "'')" +
+			"and u.idusers=m.idusers;"
 
 		rows, err := db.Query(qryString)
 		checkErr(err)
 		defer rows.Close()
 
 		for rows.Next() {
-			err = rows.Scan(&phone, &nick, &region, &wperiod, &userstatus)
+			err = rows.Scan(&phone, &nick, &region, &wperiod,
+				&userstatus, &machidliststr, &nummachliststr)
 			checkErr(err)
 
-			omachines = nil //&OwnMachines{[]Machine{}}
+			omachines, _ = parseOwnMachine(machidliststr, nummachliststr)
+
 			profile = Profile{phone, nick, userstatus, region, wperiod, omachines}
 		}
 

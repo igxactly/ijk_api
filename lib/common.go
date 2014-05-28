@@ -2,6 +2,7 @@ package ijk_api
 
 import (
 	"log"
+	"strings"
 )
 
 type SignInfo struct {
@@ -11,7 +12,7 @@ type SignInfo struct {
 
 type Machine struct {
 	MachineCode  string
-	MachineCount int
+	MachineCount string
 }
 
 type OwnMachines struct {
@@ -37,4 +38,23 @@ func checkErrPanic(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func parseOwnMachine(midliststr string, mnumliststr string) (omach *OwnMachines, err error) {
+	midlist := strings.Split(midliststr, ",")
+	mnumlist := strings.Split(mnumliststr, ",")
+
+	if len(midlist) == len(mnumlist) {
+		mlist := []Machine{}
+
+		for i := 0; i < len(midlist); i++ {
+			mlist = append(mlist, Machine{midlist[i], mnumlist[i]})
+		}
+
+		omach = &OwnMachines{mlist}
+	} else {
+		omach = nil
+	}
+
+	return
 }
