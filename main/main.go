@@ -21,7 +21,7 @@ func main() {
 	http.HandleFunc("/ijk/account/", ijk_api.AccountRequestHandler)
 	http.HandleFunc("/ijk/friendlist/", ijk_api.FriendListRequestHandler)
 
-	http.HandleFunc("/ijk/profile/", ijk_api.OtherRequestHandler)
+	http.HandleFunc("/ijk/profile/", ijk_api.ProfileRequestHandler)
 	http.HandleFunc("/ijk/profileimg/", ijk_api.OtherRequestHandler)
 	http.HandleFunc("/ijk/profilethumb/", ijk_api.OtherRequestHandler)
 

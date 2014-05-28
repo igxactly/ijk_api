@@ -13,17 +13,21 @@ import (
 	// "time"
 )
 
+type ProfileUpdate struct {
+	Profile *Profile `xml:"Profile,omitempty"`
+}
+
 func ProfileRequestHandler(w http.ResponseWriter, r *http.Request) {
 	s, err := httputil.DumpRequest(r, true)
 	if err == nil {
 		fmt.Println(string(s))
 	}
 
-	if r.Method == "GET" { // 친구목록 수신
-		err = ProfileListRetrieveRequestHandler(w, r)
+	if r.Method == "GET" { // 프로필 수신
+		err = ProfileRetrieveRequestHandler(w, r)
 
-	} else if r.Method == "PUT" { // 친구목록 업로드
-		err = ProfileListUpdateRequestHandler(w, r)
+	} else if r.Method == "PUT" { // 프로필 업로드
+		err = ProfileUpdateRequestHandler(w, r)
 
 	} else {
 		// http.Error(w, err.Error(), http.StatusBadRequest)
@@ -35,8 +39,12 @@ func ProfileRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err error) {
+
 	userPhoneNo := r.FormValue("phoneno")
 	userSignkey := r.FormValue("signkey")
+
+	path := r.URL.Path
+	fmt.Println(path)
 
 	db, err := sql.Open("mysql", dbAccountStr)
 	checkErr(err)
@@ -58,8 +66,8 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 	)
 
 	if err == nil {
-		qryString := "select phonenum, name, region, workingperiod, currentstatus from users" +
-			" where phonenum =" + phone + ");"
+		qryString := "select id_users, phonenum, name, region, workingperiod, currentstatus from users" +
+			" where id_users=" + id + ");"
 
 		rows, err := db.Query(qryString)
 		checkErr(err)
@@ -70,14 +78,14 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 			checkErr(err)
 
 			omachines = nil //&OwnMachines{[]Machine{}}
-			flist = append(flist, Profile{phone, nick, userstatus, region, wperiod, omachines})
+			profile = Profile{phone, nick, userstatus, region, wperiod, omachines}
 		}
 
 		err = rows.Err()
 		checkErr(err)
 
-		flrrResponce := FriendListRetrieveResult{flist}
-		x, err = xml.MarshalIndent(flrrResponce, "", "  ")
+		response := profile
+		x, err = xml.MarshalIndent(response, "", "  ")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return err
@@ -85,8 +93,8 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "user phonenum exists")
-		return errors.New("existing phonenum")
+		fmt.Fprint(w, "profile access cannot be done")
+		return errors.New("profile access cannot be done")
 	}
 
 	w.Header().Set("Content-Type", "application/xml")
@@ -100,6 +108,9 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 	fmt.Println("before read")
 	bs, err := ioutil.ReadAll(r.Body)
 	checkErr(err)
+
+	path := r.URL.Path
+	fmt.Println(path)
 
 	userPhoneNo := r.FormValue("phoneno")
 	userSignkey := r.FormValue("signkey")
@@ -120,102 +131,55 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 		// parse xml from request body
 		fmt.Println("before parse")
 
-		var flUpd FriendListUpdate
+		var (
+			profileUpdate ProfileUpdate
+			// profile       Profile
+			// phone         string
+			// nick          string
+			// userstatus    string
+			// region        string
+			// wperiod       int
+			// omachines     *OwnMachines
+		)
+
 		fmt.Println("going to parse")
-		err = xml.Unmarshal(bs, &flUpd)
+		err = xml.Unmarshal(bs, &profileUpdate)
 		fmt.Println("just parsed")
 		//checkErr(err)
 
 		fmt.Println("XML Unmarshaled")
-		//fmt.Println(flUpd)
+		fmt.Println(profileUpdate)
 
-		list := ""
+		var (
+			qryString string
+			stmt      *sql.Stmt
+			res       sql.Result
+		)
 
-		fmt.Println("before loop", flUpd)
-		for idx, e := range flUpd.NewFriends {
-			fmt.Println("in loop" + e)
-			if idx > 0 {
-				list += ","
-			}
-			list += "'" + e + "'"
+		qryString = ""
+
+		if profileUpdate.Profile.UserStatus == "free" {
+			qryString = "update users set currentstatus='free'" +
+				"where phonenum='" + userPhoneNo + "';"
+
+		} else if profileUpdate.Profile.UserStatus == "busy" {
+			qryString = "update users set currentstatus='busy'" +
+				"where phonenum='" + userPhoneNo + "';"
+
 		}
 
-		fmt.Println("list: " + list)
+		if len(qryString) > 0 {
+			stmt, err = db.Prepare(qryString)
+			checkErr(err)
 
-		qryString := "insert into friendrelation (fk_idusers, fk_idusers_friend)" +
-			" (select a.idusers, b.idusers" +
-			" from users a, users b" +
-			" where a.phonenum='" + userPhoneNo + "' and b.phonenum in (" + list + "));"
+			res, err = stmt.Exec()
+			checkErr(err)
 
-		stmt, err := db.Prepare(qryString)
-		checkErr(err)
-
-		res, err := stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
-
-		list = ""
-
-		for idx, e := range flUpd.DelFriends {
-			if idx > 0 {
-				list += ","
-			}
-			list += "'" + e + "'"
+			_, err = res.LastInsertId()
+			checkErr(err)
 		}
-
-		fmt.Println("list2:" + list)
-
-		qryString = "SET SQL_SAFE_UPDATES = 0;"
-
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
-
-		res, err = stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
-
-		qryString = " delete from friendrelation" +
-			" where idfriendrelation in (select temp.idfriendrelation from (" +
-			" select idfriendrelation" +
-			" from friendrelation" +
-			" where" +
-			" fk_idusers in (" +
-			" select idusers from users" +
-			" where phonenum='" + userPhoneNo + "'" +
-			" )" +
-			" and" +
-			" fk_idusers_friend in (" +
-			" select idusers from users" +
-			" where phonenum in (" + list +
-			" ) )" +
-			" ) as temp" +
-			" );"
 
 		fmt.Println(qryString)
-
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
-
-		res, err = stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
-
-		qryString = " SET SQL_SAFE_UPDATES = 1;"
-
-		stmt, err = db.Prepare(qryString)
-		checkErr(err)
-
-		res, err = stmt.Exec()
-		checkErr(err)
-
-		_, err = res.LastInsertId()
-		checkErr(err)
 
 	} else { // if exists
 		w.WriteHeader(http.StatusBadRequest)
