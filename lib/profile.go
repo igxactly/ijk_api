@@ -10,6 +10,7 @@ import (
 	// "log"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	// "time"
 )
 
@@ -45,6 +46,10 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 
 	path := r.URL.Path
 	fmt.Println(path)
+
+	rqPrfNumList := strings.SplitAfterN(path, "/", 4)
+
+	rqProfileNum := strings.Trim(rqPrfNumList[len(rqPrfNumList)-1], "/ ")
 
 	db, err := sql.Open("mysql", dbAccountStr)
 	checkErr(err)
@@ -84,7 +89,7 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 			" ) as m" +
 			" where" +
 			" u.idusers" +
-			" in (select idusers from users where phonenum='" + userPhoneNo + "')" +
+			" in (select idusers from users where phonenum='" + rqProfileNum + "')" +
 			" and u.idusers=m.idusers;"
 
 		rows, err := db.Query(qryString)
@@ -180,11 +185,11 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 
 		if profileUpdate.Profile.UserStatus == "free" {
 			qryString = "update users set currentstatus='free'" +
-				"where phonenum='" + userPhoneNo + "';"
+				" where phonenum='" + userPhoneNo + "';"
 
 		} else if profileUpdate.Profile.UserStatus == "busy" {
 			qryString = "update users set currentstatus='busy'" +
-				"where phonenum='" + userPhoneNo + "';"
+				" where phonenum='" + userPhoneNo + "';"
 
 		}
 
