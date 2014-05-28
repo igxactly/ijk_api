@@ -49,7 +49,7 @@ func parseOwnMachine(midliststr string, mnumliststr string) (omach *OwnMachines,
 
 		for i := 0; i < len(midlist); i++ {
 			mid, mnum := strings.TrimSpace(midlist[i]), strings.TrimSpace(mnumlist[i])
-			mlist = append(mlist, Machine{})
+			mlist = append(mlist, Machine{mid, mnum})
 		}
 
 		omach = &OwnMachines{mlist}
