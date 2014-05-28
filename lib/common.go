@@ -16,7 +16,7 @@ type Machine struct {
 }
 
 type OwnMachines struct {
-	Test []Machine `xml:""`
+	Machine []Machine `xml:""`
 }
 
 type Profile struct {
