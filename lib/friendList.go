@@ -22,19 +22,6 @@ type FriendListUpdate struct {
 	DelFriends []string `xml:"DelFriend>PhoneNumber"`
 }
 
-/*type NewFriend struct {
-	PhoneNumbers []string `xml:"PhoneNumber,omitempty"`
-}
-
-type DelFriend struct {
-	PhoneNumbers []string `xml:"PhoneNumber,omitempty"`
-}
-
-type FriendListUpdate struct {
-	NewFriend *NewFriend `xml:"NewFriend,omitempty"`
-	DelFriend *DelFriend `xml:"DelFriend,omitempty"`
-}*/
-
 func FriendListRequestHandler(w http.ResponseWriter, r *http.Request) {
 	s, err := httputil.DumpRequest(r, true)
 	if err == nil {
@@ -119,7 +106,16 @@ func FriendListRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (e
 
 			omachines, _ = parseOwnMachine(machidliststr, nummachliststr)
 
-			flist = append(flist, Profile{phone, nick, userstatus, region, wperiod, omachines})
+			profile := Profile{new(string), new(string), new(string),
+				new(string), new(int), omachines}
+
+			*profile.PhoneNumber = phone
+			*profile.NickName = nick
+			*profile.Region = region
+			*profile.WorkingPeriod = wperiod
+			*profile.UserStatus = userstatus
+
+			flist = append(flist, profile)
 		}
 
 		err = rows.Err()

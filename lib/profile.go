@@ -103,7 +103,14 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 
 			omachines, _ = parseOwnMachine(machidliststr, nummachliststr)
 
-			profile = Profile{phone, nick, userstatus, region, wperiod, omachines}
+			profile = Profile{new(string), new(string), new(string),
+				new(string), new(int), omachines}
+
+			*profile.PhoneNumber = phone
+			*profile.NickName = nick
+			*profile.Region = region
+			*profile.WorkingPeriod = wperiod
+			*profile.UserStatus = userstatus
 		}
 
 		err = rows.Err()
@@ -158,13 +165,7 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 
 		var (
 			profileUpdate ProfileUpdate
-			// profile       Profile
-			// phone         string
-			// nick          string
-			// userstatus    string
-			// region        string
-			// wperiod       int
-			// omachines     *OwnMachines
+			pf            *Profile
 		)
 
 		fmt.Println("going to parse")
@@ -181,19 +182,33 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 			res       sql.Result
 		)
 
+		pf = profileUpdate.Profile
+
 		qryString = ""
 
-		if profileUpdate.Profile.UserStatus == "free" {
-			qryString = "update users set currentstatus='free'" +
-				" where phonenum='" + userPhoneNo + "';"
+		if pf.Region != nil {
+			qryString += "region='" + *pf.Region + "' "
+		}
 
-		} else if profileUpdate.Profile.UserStatus == "busy" {
-			qryString = "update users set currentstatus='busy'" +
-				" where phonenum='" + userPhoneNo + "';"
+		if pf.NickName != nil {
+			qryString += "name='" + *pf.NickName + "' "
+		}
 
+		if pf.WorkingPeriod != nil {
+			qryString += "workingperiod='" + string(*pf.WorkingPeriod) + "' "
+		}
+
+		if *pf.UserStatus == "free" {
+			qryString += "currentstatus='free' "
+
+		} else if *pf.UserStatus == "busy" {
+			qryString += "currentstatus='busy' "
 		}
 
 		if len(qryString) > 0 {
+			qryString = "update users set " +
+				qryString +
+				" where phonenum='" + userPhoneNo + "';"
 			stmt, err = db.Prepare(qryString)
 			checkErr(err)
 
@@ -205,6 +220,12 @@ func ProfileUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err er
 		}
 
 		fmt.Println(qryString)
+
+		// if pf.OwnMachines !=nil {
+		// 	for i := 0; i < len(pf.OwnMachines.Machine); i++ {
+
+		// 	}
+		// }
 
 	} else { // if exists
 		w.WriteHeader(http.StatusBadRequest)

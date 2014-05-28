@@ -20,11 +20,11 @@ type OwnMachines struct {
 }
 
 type Profile struct {
-	PhoneNumber   string
-	NickName      string
-	UserStatus    string
-	Region        string       `xml:"Region,omitempty"`
-	WorkingPeriod int          `xml:"WorkingPeriod,omitempty"`
+	PhoneNumber   *string
+	NickName      *string
+	UserStatus    *string
+	Region        *string      `xml:"Region,omitempty"`
+	WorkingPeriod *int         `xml:"WorkingPeriod,omitempty"`
 	OwnMachines   *OwnMachines `xml:"OwnMachines,omitempty"`
 }
 
