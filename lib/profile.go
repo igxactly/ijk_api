@@ -84,7 +84,7 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 			" ) as m" +
 			" where" +
 			" u.idusers" +
-			" in (select idusers from users where phonenum='" + userPhoneNo + "'')" +
+			" in (select idusers from users where phonenum='" + userPhoneNo + "')" +
 			" and u.idusers=m.idusers;"
 
 		rows, err := db.Query(qryString)
