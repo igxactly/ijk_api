@@ -75,31 +75,49 @@ func FriendListRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (e
 
 	//query profiles of friends
 	var (
-		flist      []Profile
-		phone      string
-		nick       string
-		userstatus string
-		region     string
-		wperiod    int
-		omachines  *OwnMachines
-		x          []byte
+		flist          []Profile
+		phone          string
+		nick           string
+		userstatus     string
+		region         string
+		wperiod        int
+		machidliststr  string
+		nummachliststr string
+		omachines      *OwnMachines
+		x              []byte
 	)
 
 	if err == nil {
-		qryString := "select phonenum, name, region, workingperiod, currentstatus from users" +
-			" where idusers in" +
-			" (select fk_idusers_friend from friendrelation" +
-			" where fk_idusers=" + id + ");"
+		qryString := "select" +
+			" u.phonenum, u.name, u.region, u.workingperiod," +
+			" u.currentstatus, m.idmachinelist, m.nummachinelist" +
+			" from" +
+			" users" +
+			" as u," +
+			" (select" +
+			" idusers," +
+			" group_concat(idmachine separator ', ')" +
+			" as idmachinelist," +
+			" group_concat(nummachine separator ', ')" +
+			" as nummachinelist" +
+			" from ownmachines group by idusers" +
+			" ) as m" +
+			" where" +
+			" u.idusers" +
+			" in (select idusers from users where phonenum='" + userPhoneNo + "')" +
+			" and u.idusers=m.idusers;"
 
 		rows, err := db.Query(qryString)
 		checkErr(err)
 		defer rows.Close()
 
 		for rows.Next() {
-			err = rows.Scan(&phone, &nick, &region, &wperiod, &userstatus)
+			err = rows.Scan(&phone, &nick, &region, &wperiod,
+				&userstatus, &machidliststr, &nummachliststr)
 			checkErr(err)
 
-			omachines = nil //&OwnMachines{[]Machine{}}
+			omachines, _ = parseOwnMachine(machidliststr, nummachliststr)
+
 			flist = append(flist, Profile{phone, nick, userstatus, region, wperiod, omachines})
 		}
 
@@ -176,7 +194,7 @@ func FriendListUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err
 				" (select a.idusers, b.idusers" +
 				" from users a, users b" +
 				" where a.phonenum='" + userPhoneNo + "' and b.phonenum in (" + list + "));"
-		
+
 			stmt, err := db.Prepare(qryString)
 			checkErr(err)
 
@@ -195,9 +213,9 @@ func FriendListUpdateRequestHandler(w http.ResponseWriter, r *http.Request) (err
 			}
 			list += "'" + e + "'"
 		}
-		
+
 		fmt.Println("list2:" + list)
-		
+
 		if len(list) != 0 {
 			qryString := "SET SQL_SAFE_UPDATES = 0;"
 
