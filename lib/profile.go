@@ -69,22 +69,22 @@ func ProfileRetrieveRequestHandler(w http.ResponseWriter, r *http.Request) (err 
 
 	if err == nil {
 		qryString := "select" +
-			"u.phonenum, u.name, u.region, u.workingperiod," +
-			"u.currentstatus, m.idmachinelist, m.nummachine" +
-			"from" +
-			"users" +
-			"as u," +
-			"(select" +
-			"idusers," +
-			"group_concat(idmachine separator ', ')" +
-			"as idmachinelist," +
-			"group_concat(nummachine separator ', ')" +
-			"as nummachinelist" +
-			"from ownmachines group by idusers" +
-			") as m" +
-			"u.idusers" +
-			"in (select idusers from users where phonenum='" + userPhoneNo + "'')" +
-			"and u.idusers=m.idusers;"
+			" u.phonenum, u.name, u.region, u.workingperiod," +
+			" u.currentstatus, m.idmachinelist, m.nummachine" +
+			" from" +
+			" users" +
+			" as u," +
+			" (select" +
+			" idusers," +
+			" group_concat(idmachine separator ', ')" +
+			" as idmachinelist," +
+			" group_concat(nummachine separator ', ')" +
+			" as nummachinelist" +
+			" from ownmachines group by idusers" +
+			" ) as m" +
+			" u.idusers" +
+			" in (select idusers from users where phonenum='" + userPhoneNo + "'')" +
+			" and u.idusers=m.idusers;"
 
 		rows, err := db.Query(qryString)
 		checkErr(err)
